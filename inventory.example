@@ -1,0 +1,7 @@
+# Inventory example for remote_run.py
+# Format: host[,user[,port]]
+# Blank lines and comments (#) are ignored.
+
+192.168.1.100,venkat,22
+192.168.1.101,venkat,2222
+localhost
