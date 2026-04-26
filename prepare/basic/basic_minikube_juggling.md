@@ -98,6 +98,59 @@ kubectl delete pod nginx-pod
 minikube stop
 ```
 
+## Act 5: Multi-Node Juggling (Optional)
+
+### 13. Create a Multi-Node Minikube Cluster
+```bash
+minikube delete
+minikube start --driver=docker --nodes=3
+```
+
+This creates one control plane and two worker nodes in the same Minikube cluster.
+
+### 14. Add Nodes to an Existing Minikube Cluster
+```bash
+minikube node add
+minikube node add
+```
+
+Then verify the cluster:
+```bash
+kubectl get nodes
+```
+
+*Troubleshooting:* If nodes show "NotReady" status, wait a few minutes for them to initialize. Check node status with `kubectl describe node <node-name>` and Minikube logs with `minikube logs`. If issues persist, try `minikube node stop <node-name>` then `minikube node start <node-name>`, or delete and recreate the cluster.
+
+### 15. Run a Pod on a Specific Node
+To schedule a pod on a specific node, use nodeSelector in a YAML manifest:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
+  nodeSelector:
+    kubernetes.io/hostname: minikube-m02  # Replace with actual node name
+```
+
+Apply it:
+```bash
+kubectl apply -f nginx-pod.yaml
+```
+
+For `kubectl run`, you can use `--overrides`:
+```bash
+kubectl run nginx-pod --image=nginx --port=80 --overrides='{"spec":{"nodeSelector":{"kubernetes.io/hostname":"minikube-m02"}}}'
+```
+
+*Real Kubernetes note:* In a real cluster, instead of `minikube node add`, you use `kubeadm init` on the control plane and `kubeadm join` on worker nodes. Minikube's multi-node feature is for learning and testing only.
+
 ## Juggling Challenges (Exercises)
 
 1. **Beginner:** Start Minikube, deploy 3 different pods (nginx, busybox, alpine), expose them, and access via browser.
