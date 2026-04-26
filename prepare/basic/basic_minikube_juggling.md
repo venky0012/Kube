@@ -15,6 +15,17 @@ minikube start --driver=docker
 ```
 *Why?* This fires up a single-node Kubernetes cluster in a VM or container. The `--driver=docker` uses Docker as the runtime.
 
+*Real Kubernetes note:* In production, you won't use Minikube. Real Kubernetes runs on multiple nodes in a cluster, often provisioned on cloud providers or on metal servers. You use kubeadm, managed services like EKS/GKE/AKS, or Kubernetes distributions to install it, and you interact with it the same way using `kubectl`.
+
+*Troubleshooting note:* If `minikube start` fails because the control plane cannot connect or kubelet fails, the fix is to delete the broken cluster and restart it cleanly. The exact recovery steps we used are:
+
+```bash
+minikube delete
+minikube start --driver=docker
+```
+
+This guide now explains the recovery path, and the setup scripts include a retry path that will delete and recreate the cluster if the first start attempt fails.
+
 ### 2. Check the Status
 ```bash
 minikube status

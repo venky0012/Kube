@@ -129,7 +129,16 @@ def start_minikube_cluster():
     """Start Minikube cluster if not running."""
     if not check_command([CONFIG["bin_paths"]["minikube"], "status"]):
         print("Starting Minikube cluster...")
-        run_command([CONFIG["bin_paths"]["minikube"], "start", f"--driver={CONFIG['minikube_driver']}", "--force"])
+        try:
+            run_command([CONFIG["bin_paths"]["minikube"], "start", f"--driver={CONFIG['minikube_driver']}", "--force"])
+        except SystemExit:
+            print("Minikube start failed. Cleaning up and retrying...")
+            run_command_no_check([CONFIG["bin_paths"]["minikube"], "delete", "--all"])
+            run_command([CONFIG["bin_paths"]["minikube"], "start", f"--driver={CONFIG['minikube_driver']}", "--force"])
+
+        if not check_command([CONFIG["bin_paths"]["minikube"], "status"]):
+            print("Minikube did not start successfully after retry. Please inspect Minikube logs.")
+            sys.exit(1)
     else:
         print("Minikube cluster already running.")
 
