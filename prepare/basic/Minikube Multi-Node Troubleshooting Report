@@ -1,0 +1,58 @@
+Minikube Multi-Node Troubleshooting Report
+Date: April 27, 2026
+Subject: Resolution of "NotReady" Status in Multi-Node Minikube Cluster
+Executive Summary
+The Minikube cluster was successfully configured with one control-plane and two worker nodes (m02 and m03). Initially, the worker nodes were stuck in a NotReady state, preventing pod scheduling. The issue was identified as a missing Container Network Interface (CNI) configuration. The problem was resolved by manually deploying the Flannel CNI, which initialized the network fabric across all nodes.
+1. Problem Identification
+Upon installation and startup of the multi-node cluster, the following node status was observed:
+[venkat@lin-test ~]$ kubectl get nodes
+NAME           STATUS     ROLES           AGE   VERSION
+minikube       Ready      control-plane   23h   v1.35.1
+minikube-m02   NotReady   <none>          23h   v1.35.1
+minikube-m03   NotReady   <none>          23h   v1.35.1
+
+
+User pods, such as nginx-pod1, remained in a Pending state because the scheduler could not find a healthy (Ready) node to host them.
+2. Root Cause Analysis
+By SSHing into the worker node (minikube-m02) and inspecting the kubelet logs, the specific error was identified:
+"Container runtime network not ready" networkReady="NetworkReady=false reason:NetworkPluginNotReady message:docker: network plugin is not ready: cni config uninitialized"
+
+
+Explanation: The Kubelet service on the worker nodes was running, but it could not initialize networking because no CNI plugin (like Kindnet or Flannel) had provided a configuration file in /etc/cni/net.d/. Without a CNI, the node cannot assign IP addresses to pods, and therefore remains NotReady.
+3. Step-by-Step Resolution
+Step
+Command
+Description & Usage
+ 
+1. Internal Diagnostic
+minikube ssh -n minikube-m02
+Logs into the worker node's shell to inspect local services and files.
+2. Service Check
+sudo systemctl status kubelet
+Verifies if the Kubelet (the node agent) is running and checks its error logs.
+3. CNI Verification
+kubectl get pods -n kube-system
+Used to check if networking pods are running. In this case, they were missing.
+4. Manual CNI Deployment
+kubectl apply -f [URL]
+Deploys the Flannel CNI manifest to create the networking fabric.
+5. Readiness Verification
+kubectl get nodes
+Confirms that the nodes have transitioned to Ready after CNI initialization.
+
+4. Detailed Command Usage
+The Recovery Command
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+
+
+kubectl apply: The standard way to create or update resources in a cluster.
+-f [URL]: Points to the official Flannel YAML configuration.
+Result: Creates a kube-flannel namespace and starts the kube-flannel-ds (DaemonSet).
+Monitoring the Fix
+kubectl get pods -n kube-flannel -w
+
+
+-n kube-flannel: Targets the specific namespace where the network plugin lives.
+-w (Watch): Keeps the terminal open and updates in real-time as pods transition to Running.
+5. Conclusion
+The cluster is now fully operational. The worker nodes minikube-m02 and minikube-m03 are Ready, and the networking fabric is established. Future multi-node setups should ensure that a CNI is explicitly selected during minikube start to avoid manual intervention.
